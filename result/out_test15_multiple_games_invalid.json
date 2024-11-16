@@ -296,6 +296,15 @@
   "playerIdx" : 2,
   "output" : [ ]
 }, {
+  "command" : "getTotalGamesPlayed",
+  "output" : 1
+}, {
+  "command" : "getPlayerTwoWins",
+  "output" : 0
+}, {
+  "command" : "getPlayerOneWins",
+  "output" : 1
+}, {
   "command" : "getPlayerMana",
   "playerIdx" : 1,
   "output" : 0
@@ -572,17 +581,6 @@
     "name" : "Warden"
   }
 }, {
-  "command" : "cardUsesAttack",
-  "cardAttacker" : {
-    "x" : 3,
-    "y" : 3
-  },
-  "cardAttacked" : {
-    "x" : 1,
-    "y" : 4
-  },
-  "error" : "Attacked card does not belong to the enemy."
-}, {
   "command" : "getPlayerMana",
   "playerIdx" : 1,
   "output" : 49
@@ -613,17 +611,6 @@
   "playerIdx" : 1,
   "output" : 59
 }, {
-  "command" : "cardUsesAttack",
-  "cardAttacker" : {
-    "x" : 3,
-    "y" : 4
-  },
-  "cardAttacked" : {
-    "x" : 1,
-    "y" : 4
-  },
-  "error" : "Attacked card does not belong to the enemy."
-}, {
   "command" : "getFrozenCardsOnTable",
   "output" : [ ]
 }, {
@@ -636,7 +623,7 @@
     "x" : 1,
     "y" : 1
   },
-  "error" : "Attacked card is not of type 'Tank'."
+  "error" : "Attacker card has already attacked this turn."
 }, {
   "command" : "getCardAtPosition",
   "x" : 0,
@@ -673,17 +660,6 @@
     "name" : "Warden"
   }
 }, {
-  "command" : "cardUsesAttack",
-  "cardAttacker" : {
-    "x" : 2,
-    "y" : 2
-  },
-  "cardAttacked" : {
-    "x" : 1,
-    "y" : 4
-  },
-  "error" : "Attacked card does not belong to the enemy."
-}, {
   "command" : "getPlayerTurn",
   "output" : 2
 }, {
@@ -703,17 +679,6 @@
 }, {
   "command" : "getPlayerTurn",
   "output" : 2
-}, {
-  "command" : "cardUsesAttack",
-  "cardAttacker" : {
-    "x" : 2,
-    "y" : 1
-  },
-  "cardAttacked" : {
-    "x" : 1,
-    "y" : 1
-  },
-  "error" : "Attacked card is not of type 'Tank'."
 }, {
   "command" : "getCardAtPosition",
   "x" : 0,
@@ -745,27 +710,6 @@
     "name" : "The Ripper"
   }
 }, {
-  "command" : "useAttackHero",
-  "cardAttacker" : {
-    "x" : 2,
-    "y" : 0
-  },
-  "error" : "Attacked card is not of type 'Tank'."
-}, {
-  "command" : "useAttackHero",
-  "cardAttacker" : {
-    "x" : 3,
-    "y" : 1
-  },
-  "error" : "Attacked card is not of type 'Tank'."
-}, {
-  "command" : "useAttackHero",
-  "cardAttacker" : {
-    "x" : 3,
-    "y" : 0
-  },
-  "error" : "Attacked card is not of type 'Tank'."
-}, {
   "command" : "getPlayerTurn",
   "output" : 1
 }, {
@@ -794,24 +738,17 @@
   }, {
     "mana" : 1,
     "attackDamage" : 6,
-    "health" : 4,
+    "health" : 3,
     "description" : "Premium card: His presence is not known even by ghosts, success at all costs.",
     "colors" : [ "Black", "White" ],
     "name" : "Sentinel"
   } ], [ {
-    "mana" : 1,
+    "mana" : 2,
     "attackDamage" : 6,
-    "health" : 3,
-    "description" : "Premium card: Ravished by the winds of hell, no soul is to be forgiven.",
-    "colors" : [ "Black", "Yellow" ],
-    "name" : "The Ripper"
-  }, {
-    "mana" : 1,
-    "attackDamage" : 2,
-    "health" : 1,
-    "description" : "Premium card: No matter how many, his body will fight. Save your breath for the Mountain is strong.",
-    "colors" : [ "Brown", "Black", "Grey" ],
-    "name" : "Goliath"
+    "health" : 6,
+    "description" : "Standard card: When he is near, close your eyes. They betray your mind.",
+    "colors" : [ "Yellow", "Orange", "Red" ],
+    "name" : "Miraj"
   } ], [ {
     "mana" : 2,
     "attackDamage" : 6,
@@ -863,4 +800,13 @@
   "command" : "getCardsInHand",
   "playerIdx" : 1,
   "output" : [ ]
+}, {
+  "command" : "getTotalGamesPlayed",
+  "output" : 2
+}, {
+  "command" : "getPlayerTwoWins",
+  "output" : 1
+}, {
+  "command" : "getPlayerOneWins",
+  "output" : 1
 } ]

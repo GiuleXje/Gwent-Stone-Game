@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.checker.CheckerConstants;
 import org.poo.fileio.*;
 
+import javax.management.OperationsException;
 import javax.swing.plaf.basic.BasicSliderUI;
 import java.io.File;
 import java.io.IOException;
@@ -77,15 +78,40 @@ public final class Main {
         ArrayNode output = objectMapper.createArrayNode();
 
         // get decks
-        DecksInput playerOneDecks = inputData.getPlayerOneDecks();
-        DecksInput playerTwoDecks = inputData.getPlayerTwoDecks();
+        DecksInput auxPlayerOneDecks = inputData.getPlayerOneDecks();
+        DecksInput auxPlayerTwoDecks = inputData.getPlayerTwoDecks();
         ArrayList<GameInput> games = inputData.getGames();
+        int OneWins = 0;
+        int TwoWins = 0;
+        int gamesPlayed = 0;
         for (GameInput game : games) { //loop through all existent games
+            gamesPlayed++;
             StartGameInput startGame = game.getStartGame();
             int pl1_idx = startGame.getPlayerOneDeckIdx();
             int pl2_idx = startGame.getPlayerTwoDeckIdx();
             int turns = 0;
-            boolean endGame = false;
+            DecksInput playerOneDecks = new DecksInput();
+            DecksInput playerTwoDecks = new DecksInput();
+            ArrayList<ArrayList<CardInput>> pla1DeckCopy = new ArrayList<>();
+            for (ArrayList<CardInput> deck : auxPlayerOneDecks.getDecks()) {
+                ArrayList<CardInput> newDeck = new ArrayList<>();
+                for (CardInput card : deck) {
+                    newDeck.add(card.clone()); // Assuming CardInput has a copy constructor
+                }
+                pla1DeckCopy.add(newDeck);
+            }
+            playerOneDecks.setDecks(pla1DeckCopy);
+
+            // Copy outer list (deck structure) and inner list (cards) for player two
+            ArrayList<ArrayList<CardInput>> pla2DeckCopy = new ArrayList<>();
+            for (ArrayList<CardInput> deck : auxPlayerTwoDecks.getDecks()) {
+                ArrayList<CardInput> newDeck = new ArrayList<>();
+                for (CardInput card : deck) {
+                    newDeck.add(card.clone()); // Assuming CardInput has a copy constructor
+                }
+                pla2DeckCopy.add(newDeck);
+            }
+            playerTwoDecks.setDecks(pla2DeckCopy);
             // set a new game table
             GameTable gameTable = new GameTable();
             Player Player1 = new Player();
@@ -142,8 +168,10 @@ public final class Main {
 
             //get game commands
             ArrayList < ActionsInput > actions = game.getActions();
-            boolean end_round = false;
+            boolean endGame = false;
             for (ActionsInput action : actions) {
+//                if (endGame)
+//                    break;
                 String command = action.getCommand();
                 int playerIdx;
                 Player player;
@@ -553,8 +581,14 @@ public final class Main {
                         if (player.getHero().getHealth() <= 0) {
                             if (Player1.isMyTurn()) {
                                 commandOutput.put("gameEnded", "Player one killed the enemy hero.");
+                                Player1.IJustWon();
+                                OneWins++;
+                                endGame = true;
                             } else {
                                 commandOutput.put("gameEnded", "Player two killed the enemy hero.");
+                                Player2.IJustWon();
+                                TwoWins++;
+                                endGame = true;
                             }
                             output.add(commandOutput);
                             break;
@@ -614,6 +648,22 @@ public final class Main {
                                 gameTable.performGeneralKocioraw(row);
                             }
                         }
+                        break;
+
+                    case "getTotalGamesPlayed":
+                        commandOutput.put("command", command);
+                        commandOutput.put("output", gamesPlayed);
+                        output.add(commandOutput);
+                        break;
+                    case "getPlayerOneWins":
+                        commandOutput.put("command", command);
+                        commandOutput.put("output", OneWins);
+                        output.add(commandOutput);
+                        break;
+                    case "getPlayerTwoWins":
+                        commandOutput.put("command", command);
+                        commandOutput.put("output", TwoWins);
+                        output.add(commandOutput);
                         break;
                 }
             }

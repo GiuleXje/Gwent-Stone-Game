@@ -17,6 +17,20 @@ public final class CardInput {
     public CardInput() {
     }
 
+    public CardInput clone() {
+        CardInput clone = new CardInput();
+        clone.mana = mana;
+        clone.health = health;
+        clone.attackDamage = attackDamage;
+        clone.description = description;
+        clone.colors = colors;
+        clone.name = name;
+        clone.used = used;
+        clone.frozen = frozen;
+        clone.usedAbility = usedAbility;
+        return clone;
+
+    }
     public int getMana() {
         return mana;
     }
@@ -124,7 +138,6 @@ public final class CardInput {
                 + ", colors="
                 + colors
                 + ", name='"
-                +  ""
                 + name
                 + '\''
                 + '}';

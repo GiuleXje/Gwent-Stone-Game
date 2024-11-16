@@ -14,12 +14,14 @@ public class Player {
 	private ArrayList<CardInput> inHand;
 	private CardInput hero;
 	private boolean myTurn;
+	int wins;
 
 	public Player() {
 		myTurn = false;
 		mana = 0;
 		inHand = new ArrayList<CardInput>();
 		deck = new ArrayList<CardInput>();
+		wins = 0;
 	}
 
 	public void setDeck(ArrayList<CardInput> deck) {
@@ -52,7 +54,13 @@ public class Player {
 	public boolean isMyTurn() {
 		return myTurn;
 	}
-
+	public int getWins() {
+		return wins;
+	}
+	public void setWins(int wins) {
+		this.wins = wins;
+	}
+	public void IJustWon() {wins++; }
 	public void setDeckUnused () {
 		for (CardInput card : deck) {
 			card.setFrozen(false);
