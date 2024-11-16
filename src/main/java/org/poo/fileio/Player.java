@@ -1,7 +1,6 @@
 package org.poo.fileio;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -14,7 +13,7 @@ public class Player {
 	private ArrayList<CardInput> inHand;
 	private CardInput hero;
 	private boolean myTurn;
-	int wins;
+	private int wins;
 
 	public Player() {
 		myTurn = false;
@@ -60,8 +59,9 @@ public class Player {
 	public void setWins(int wins) {
 		this.wins = wins;
 	}
-	public void IJustWon() {wins++; }
-	public void setDeckUnused () {
+
+	public void iJustWon() { wins++; }
+	public void setDeckUnused() {
 		for (CardInput card : deck) {
 			card.setFrozen(false);
 			card.setUsed(false);
@@ -124,7 +124,7 @@ public class Player {
 		return deckOutput;
 	}
 
-	public void add_mana(int mana) {
+	public void addMana(int mana) {
 		this.mana += mana;
 	}
 

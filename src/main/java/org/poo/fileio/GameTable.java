@@ -1,7 +1,6 @@
 package org.poo.fileio;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -10,12 +9,14 @@ import java.util.ArrayList;
 public class GameTable {
 	private ArrayList<ArrayList<CardInput>> table;
 	private static final ObjectMapper objectMapper = new ObjectMapper();
+	public static final int LINELIMIT = 4;
+	public static final int COLLIMIT = 5;
 
 	public GameTable() {
-		table = new ArrayList<>(4);
-		for (int i = 0 ; i < 4 ; i++) {
-			ArrayList<CardInput> row = new ArrayList<>(5);
-			for (int j = 0 ; j < 5 ; j++) {
+		table = new ArrayList<>(LINELIMIT);
+		for (int i = 0;  i < LINELIMIT; i++) {
+			ArrayList<CardInput> row = new ArrayList<>(COLLIMIT);
+			for (int j = 0; j < COLLIMIT; j++) {
 				row.add(null);
 			}
 			table.add(row);
@@ -28,20 +29,23 @@ public class GameTable {
 	public ArrayList<ArrayList<CardInput>> getTable() {
 		return table;
 	}
+	public int getLINELIMIT() { return LINELIMIT; }
+	public int getCOLLIMIT() { return COLLIMIT; }
 
 	public int place_card(int player, CardInput card) {
 		if (player == 1) {
-			if (card.getName().equals("Sentinel") || card.getName().equals("Berserker") ||
-					card.getName().equals("The Cursed One") || card.getName().equals("Disciple")) {
-				for (int i = 0 ; i < 5 ; i++) {
+			if (card.getName().equals("Sentinel") || card.getName().equals("Berserker")
+					|| card.getName().equals("The Cursed One")
+					|| card.getName().equals("Disciple")) {
+				for (int i = 0; i < COLLIMIT; i++) {
 					if (table.get(3).get(i) == null) {
 						table.get(3).set(i, card);
 						return 0;
 					}
 				}
-			} else if (card.getName().equals("Goliath") || card.getName().equals("Warden") ||
-					card.getName().equals("The Ripper") || card.getName().equals("Miraj")) {
-				for (int i = 0 ; i < 5 ; i++) {
+			} else if (card.getName().equals("Goliath") || card.getName().equals("Warden")
+					|| card.getName().equals("The Ripper") || card.getName().equals("Miraj")) {
+				for (int i = 0; i < COLLIMIT; i++) {
 					if (table.get(2).get(i) == null) {
 						table.get(2).set(i, card);
 						return 0;
@@ -49,17 +53,19 @@ public class GameTable {
 				}
 			}
 		} else {
-			if (card.getName().equals("Sentinel") || card.getName().equals("Berserker") ||
-					card.getName().equals("The Cursed One") || card.getName().equals("Disciple")) {
-				for (int i = 0 ; i < 5 ; i++) {
+			if (card.getName().equals("Sentinel") || card.getName().equals("Berserker")
+					||card.getName().equals("The Cursed One")
+					|| card.getName().equals("Disciple")) {
+				for (int i = 0; i < COLLIMIT; i++) {
 					if (table.getFirst().get(i) == null) {
 						table.getFirst().set(i, card);
 						return 0;
 					}
 				}
-			} else if (card.getName().equals("Goliath") || card.getName().equals("Warden") ||
-					card.getName().equals("The Ripper") || card.getName().equals("Miraj")) {
-				for (int i = 0 ; i < 5 ; i++) {
+			} else if (card.getName().equals("Goliath") || card.getName().equals("Warden")
+					|| card.getName().equals("The Ripper")
+					|| card.getName().equals("Miraj")) {
+				for (int i = 0; i < COLLIMIT; i++) {
 					if (table.get(1).get(i) == null) {
 						table.get(1).set(i, card);
 						return 0;
@@ -73,9 +79,9 @@ public class GameTable {
 	public ArrayNode printTable() {
 		ArrayNode tableOutput = objectMapper.createArrayNode();
 
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < LINELIMIT; i++) {
 			ArrayNode rowOutput = objectMapper.createArrayNode();
-			for (int j = 0; j < 5; j++) {
+			for (int j = 0; j < COLLIMIT; j++) {
 				if (table.get(i).get(j) != null) {
 					CardInput card = table.get(i).get(j);
 					ObjectNode cardOutput = objectMapper.createObjectNode();
@@ -103,57 +109,47 @@ public class GameTable {
 		return tableOutput;
 	}
 
-	public boolean isOpponentCard (int opponent, final int x, final int y) {
+	public boolean isOpponentCard(int opponent, final int x, final int y) {
 		if (opponent == 1) {
-			return (x >= 2 && x <= 3) && (y >= 0 && y <= 4) && (table.get(x).get(y) != null);
+			return (x >= 2 && x < LINELIMIT) && (y >= 0 && y < COLLIMIT)
+					&& (table.get(x).get(y) != null);
 		}
-		return (x >= 0 && x <= 1) && (y >= 0 && y <= 4) && (table.get(x).get(y) != null);
+		return (x >= 0 && x <= 1) && (y >= 0 && y < COLLIMIT) && (table.get(x).get(y) != null);
 	}
 
-	public boolean isAttackerCard (int attacker, final int x, final int y) {
+	public boolean isAttackerCard(int attacker, final int x, final int y) {
 		if (attacker == 1) {
-			return (x >= 2 && x <= 3) && (y >= 0 && y <= 4) && table.get(x).get(y) != null;
+			return (x >= 2 && x < LINELIMIT) && (y >= 0 && y < COLLIMIT)
+					&& table.get(x).get(y) != null;
 		}
-		return (x >= 0 && x <= 1) && (y >= 0 && y <= 4) && table.get(x).get(y) != null;
+		return (x >= 0 && x <= 1) && (y >= 0 && y < COLLIMIT) && table.get(x).get(y) != null;
 	}
-	public boolean isCardUsed (final int x, final int y) {
+	public boolean isCardUsed(final int x, final int y) {
 		return table.get(x).get(y) != null && table.get(x).get(y).getUsed();
 	}
 
-	public boolean isCardFrozen (final int x, final int y) {
+	public boolean isCardFrozen(final int x, final int y) {
 		return table.get(x).get(y) != null && table.get(x).get(y).getFrozen();
 	}
 
-	public void UnfreezeAndUnUse () { //after each round unfreeze and set use to false
-		for (int i = 0 ; i < 4 ; i++) {
-			for (int j = 0 ; j < 5 ; j++) {
-				if (table.get(i).get(j) != null) {
-					table.get(i).get(j).setUsed(false);
-					table.get(i).get(j).setFrozen(false);
-					table.get(i).get(j).setUsedAbility(false);
-				}
-			}
-		}
-	}
-
-	public boolean isTankOnTable (int defender) {
+	public boolean isTankOnTable(int defender) {
 		if (defender == 1) {
-			for (int i = 2 ; i < 4 ; i++) {
-				for (int j = 0 ; j < 5 ; j++) {
+			for (int i = 2; i < LINELIMIT; i++) {
+				for (int j = 0; j < COLLIMIT; j++) {
 					if (table.get(i).get(j) != null) {
-						if (table.get(i).get(j).getName().equals("Warden") ||
-								table.get(i).get(j).getName().equals("Goliath")) {
+						if (table.get(i).get(j).getName().equals("Warden")
+								|| table.get(i).get(j).getName().equals("Goliath")) {
 							return true;
 						}
 					}
 				}
 			}
 		} else {
-			for (int i = 0 ; i < 2 ; i++) {
-				for (int j = 0 ; j < 5 ; j++) {
+			for (int i = 0; i < 2; i++) {
+				for (int j = 0; j < COLLIMIT; j++) {
 					if (table.get(i).get(j) != null) {
-						if (table.get(i).get(j).getName().equals("Warden") ||
-								table.get(i).get(j).getName().equals("Goliath")) {
+						if (table.get(i).get(j).getName().equals("Warden")
+								|| table.get(i).get(j).getName().equals("Goliath")) {
 							return true;
 						}
 					}
@@ -163,26 +159,28 @@ public class GameTable {
 		return false;
 	}
 
-	public boolean isCardAtXY (final int x, final int y) {
-		return (x >= 0  && x < 4) && (y >= 0 && y < 5) && table.get(x).get(y) != null;
+	public boolean isCardAtXY(final int x, final int y) {
+		return (x >= 0  && x < LINELIMIT)
+				&& (y >= 0 && y < COLLIMIT) && table.get(x).get(y) != null;
 	}
 
-	public void removeCard (final int x, final int y) {
-		for (int i = y ; i < 4 ; i++) {
+	public void removeCard(final int x, final int y) {
+		for (int i = y; i < LINELIMIT; i++) {
 			table.get(x).set(i, table.get(x).get(i + 1));
 		}
-		table.get(x).set(4, null);
+		table.get(x).set(LINELIMIT, null);
 	}
 
-	public ArrayNode getFrozenCards () {
+	public ArrayNode getFrozenCards() {
 		ArrayNode frozenCards = objectMapper.createArrayNode();
-		for (int i = 0 ; i < 4 ; i++) {
-			for (int j = 0 ; j < 5 ; j++) {
+		for (int i = 0; i < LINELIMIT; i++) {
+			for (int j = 0; j < COLLIMIT; j++) {
 				if (table.get(i).get(j) != null) {
 					if (table.get(i).get(j).getFrozen()) {
 						ObjectNode cardOutput = objectMapper.createObjectNode();
 						cardOutput.put("mana", table.get(i).get(j).getMana());
-						cardOutput.put("attackDamage", table.get(i).get(j).getAttackDamage());
+						cardOutput.put("attackDamage",
+								table.get(i).get(j).getAttackDamage());
 						cardOutput.put("health", table.get(i).get(j).getHealth());
 						cardOutput.put("description", table.get(i).get(j).getDescription());
 						ArrayNode colorsNode = objectMapper.createArrayNode();
@@ -200,28 +198,28 @@ public class GameTable {
 	}
 
 	//returns true if the row corresponds
-	public boolean checkRow (int player, int row) {
+	public boolean checkRow(int player, final int row) {
 		if (player == 1) {
-			return row == 2 || row == 3;
+			return row >= 2 && row < LINELIMIT;
 		}
 		return row == 0 || row == 1;
 	}
 
-	public void performLordRoyce (int row) {
-		for (int i = 0 ; i < 5 ; i++) {
+	public void performLordRoyce(final int row) {
+		for (int i = 0; i < COLLIMIT; i++) {
 			if (table.get(row).get(i) != null) {
 				table.get(row).get(i).setFrozen(true);
 			}
 		}
 	}
 
-	public void performEmpressThorina (int row) {
-		int max_health = 0;
+	public void performEmpressThorina(final int row) {
+		int maxHealth = 0;
 		int idx = 0;
-		for (int i = 0 ; i < 5 ; i++) {
+		for (int i = 0; i < COLLIMIT; i++) {
 			if (table.get(row).get(i) != null) {
-				if (table.get(row).get(i).getHealth() > max_health) {
-					max_health = table.get(row).get(i).getHealth();
+				if (table.get(row).get(i).getHealth() > maxHealth) {
+					maxHealth = table.get(row).get(i).getHealth();
 					idx = i;
 				}
 			}
@@ -229,25 +227,25 @@ public class GameTable {
 		removeCard(row, idx);
 	}
 
-	public void performKingMudface (int row) {
-		for (int i = 0 ; i < 5 ; i++) {
+	public void performKingMudface(final int row) {
+		for (int i = 0; i < COLLIMIT; i++) {
 			if (table.get(row).get(i) != null) {
 				table.get(row).get(i).incrementHealth(1);
 			}
 		}
 	}
 
-	public void performGeneralKocioraw (int row) {
-		for (int i = 0 ; i < 5 ; i++) {
+	public void performGeneralKocioraw(final int row) {
+		for (int i = 0; i < COLLIMIT; i++) {
 			if (table.get(row).get(i) != null) {
 				table.get(row).get(i).increaseAttackDamage(1);
 			}
 		}
 	}
 
-	public void unfreezePlayerOne () {
-		for (int i = 2 ; i < 4 ; i++) {
-			for (int j = 0 ; j < 5 ; j++) {
+	public void unfreezePlayerOne() {
+		for (int i = 2; i < LINELIMIT; i++) {
+			for (int j = 0; j < COLLIMIT; j++) {
 				if (table.get(i).get(j) != null) {
 					table.get(i).get(j).setFrozen(false);
 					table.get(i).get(j).setUsed(false);
@@ -257,9 +255,9 @@ public class GameTable {
 		}
 	}
 
-	public void unfreezePlayerTwo () {
-		for (int i = 0 ; i < 2 ; i++) {
-			for (int j = 0 ; j < 5 ; j++) {
+	public void unfreezePlayerTwo() {
+		for (int i = 0; i < 2; i++) {
+			for (int j = 0; j < COLLIMIT; j++) {
 				if (table.get(i).get(j) != null) {
 					table.get(i).get(j).setFrozen(false);
 					table.get(i).get(j).setUsed(false);
