@@ -12,7 +12,6 @@ import org.poo.fileio.GameTable;
 import org.poo.fileio.Player;
 import org.poo.fileio.CardInput;
 import org.poo.fileio.Coordinates;
-import org.poo.fileio.DecksInput;
 import org.poo.fileio.GameInput;
 import org.poo.fileio.Input;
 import org.poo.fileio.StartGameInput;
@@ -84,104 +83,52 @@ public final class Main {
 
         ArrayNode output = objectMapper.createArrayNode();
 
-        // get decks
-        DecksInput auxPlayerOneDecks = inputData.getPlayerOneDecks();
-        DecksInput auxPlayerTwoDecks = inputData.getPlayerTwoDecks();
         ArrayList<GameInput> games = inputData.getGames();
         int oneWins = 0;
         int twoWins = 0;
         int gamesPlayed = 0;
+        final int maxMana = 10;
         for (GameInput game : games) { //loop through all existent games
             gamesPlayed++;
             StartGameInput startGame = game.getStartGame();
             int pl1Idx = startGame.getPlayerOneDeckIdx();
             int pl2Idx = startGame.getPlayerTwoDeckIdx();
             int turns = 0;
-            final int heroHealth = 30;
-            final int maxMana = 10;
-            //deep copy of the decks
-            DecksInput playerOneDecks = new DecksInput();
-            DecksInput playerTwoDecks = new DecksInput();
-            ArrayList<ArrayList<CardInput>> pla1DeckCopy = new ArrayList<>();
-            for (ArrayList<CardInput> deck : auxPlayerOneDecks.getDecks()) {
-                ArrayList<CardInput> newDeck = new ArrayList<>();
-                for (CardInput card : deck) {
-                    newDeck.add(card.clone());
-                }
-                pla1DeckCopy.add(newDeck);
-            }
-            playerOneDecks.setDecks(pla1DeckCopy);
-
-            // Copy outer list (deck structure) and inner list (cards) for player two
-            ArrayList<ArrayList<CardInput>> pla2DeckCopy = new ArrayList<>();
-            for (ArrayList<CardInput> deck : auxPlayerTwoDecks.getDecks()) {
-                ArrayList<CardInput> newDeck = new ArrayList<>();
-                for (CardInput card : deck) {
-                    newDeck.add(card.clone());
-                }
-                pla2DeckCopy.add(newDeck);
-            }
-            playerTwoDecks.setDecks(pla2DeckCopy);
-            // set a new game table
-            GameTable gameTable = new GameTable();
             Player player1 = new Player();
             Player player2 = new Player();
-            //setting hero health to 30
-            startGame.getPlayerTwoHero().setHealth(heroHealth);
-            startGame.getPlayerOneHero().setHealth(heroHealth);
 
-            ArrayList<ArrayList<CardInput>> pl1 = playerOneDecks.getDecks();
-            ArrayList<ArrayList<CardInput>> pl2 = playerTwoDecks.getDecks();
-            ArrayList<CardInput> pl1DeckCopy = new ArrayList<>(pl1.get(pl1Idx));
-            ArrayList<CardInput> pl2DeckCopy = new ArrayList<>(pl2.get(pl2Idx));
+            //deep copy of the decks
+            player1.deepCopyDeck(inputData.getPlayerOneDecks().getDecks().get(pl1Idx));
+            player2.deepCopyDeck(inputData.getPlayerTwoDecks().getDecks().get(pl2Idx));
 
-            Collections.shuffle(pl1DeckCopy, new Random(startGame.getShuffleSeed()));
-            Collections.shuffle(pl2DeckCopy, new Random(startGame.getShuffleSeed()));
-
-            player1.setDeck(pl1DeckCopy);
-            player2.setDeck(pl2DeckCopy);
-
-            player1.setDeckUnused();
-            player2.setDeckUnused();
+            // set a new game table
+            GameTable gameTable = new GameTable();
+            //shuffle each player's deck
+            Collections.shuffle(player1.getDeck(), new Random(startGame.getShuffleSeed()));
+            Collections.shuffle(player2.getDeck(), new Random(startGame.getShuffleSeed()));
 
             // set each player's in hand card
             if (!player1.getDeck().isEmpty()) {
-                player1.add_inHand(player1.getDeck().getFirst());
+                player1.initInHand(player1.getDeck().getFirst());
                 player1.getDeck().removeFirst();
             }
             if (!player2.getDeck().isEmpty()) {
-                player2.add_inHand(player2.getDeck().getFirst());
+                player2.initInHand(player2.getDeck().getFirst());
                 player2.getDeck().removeFirst();
             }
-
             // set each player's hero
             player1.setHero(startGame.getPlayerOneHero());
             player2.setHero(startGame.getPlayerTwoHero());
-            player1.getHero().setUsed(false);
-            player2.getHero().setUsed(false);
-            player1.getHero().setFrozen(false);
-            player2.getHero().setFrozen(false);
-            player1.getHero().setUsedAbility(false);
-            player2.getHero().setUsedAbility(false);
-
             // set the starting player
             if (startGame.getStartingPlayer() == 1) {
                 player1.setMyTurn(true);
             } else {
                 player2.setMyTurn(true);
             }
-
-
-            // set each player's mana
-            player1.setMana(1);
-            player2.setMana(1);
-
             //get game commands
             ArrayList<ActionsInput> actions = game.getActions();
             boolean endGame = false;
             for (ActionsInput action : actions) {
-//                if (endGame)
-//                    break;
                 String command = action.getCommand();
                 int playerIdx;
                 Player player;
@@ -242,11 +189,11 @@ public final class Main {
                             player2.addMana(Math.min(maxMana, turns / 2 + 1));
                             // add in hand card at each turn
                             if (!player1.getDeck().isEmpty()) {
-                                player1.add_inHand(player1.getDeck().getFirst());
+                                player1.addInHand(player1.getDeck().getFirst());
                                 player1.getDeck().removeFirst();
                             }
                             if (!player2.getDeck().isEmpty()) {
-                                player2.add_inHand(player2.getDeck().getFirst());
+                                player2.addInHand(player2.getDeck().getFirst());
                                 player2.getDeck().removeFirst();
                             }
                             player1.getHero().setUsed(false);
@@ -280,7 +227,7 @@ public final class Main {
                         newCardOnTable.setUsed(false);
                         newCardOnTable.setFrozen(false);
                         newCardOnTable.setUsedAbility(false);
-                        int res = gameTable.place_card(player1.isMyTurn() ? 1 : 2, newCardOnTable);
+                        int res = gameTable.placeCard(player1.isMyTurn() ? 1 : 2, newCardOnTable);
                         if (res == 0) {
                             player.setMana(player.getMana() - newCardOnTable.getMana());
                             player.getInHand().remove(cardIdx);
@@ -385,10 +332,10 @@ public final class Main {
                             output.add(commandOutput);
                             break;
                         }
-                        CardInput cardAttacker = gameTable.getTable().get(xAttacker).get(yAttacker);
-                        if (cardAttacker != null) {
-                            cardAttacked.reduceHealth(cardAttacker.getAttackDamage());
-                            cardAttacker.setUsed(true);
+                        CardInput cardAttk = gameTable.getTable().get(xAttacker).get(yAttacker);
+                        if (cardAttk != null) {
+                            cardAttacked.reduceHealth(cardAttk.getAttackDamage());
+                            cardAttk.setUsed(true);
                             if (cardAttacked.getHealth() <= 0) {
                                 gameTable.removeCard(xAttacked, yAttacked);
                             }
@@ -403,18 +350,7 @@ public final class Main {
                         commandOutput.put("y", yCard);
                         if (gameTable.isCardAtXY(xCard, yCard)) {
                             CardInput cardAtXY = gameTable.getTable().get(xCard).get(yCard);
-                            ObjectNode cardInfo = objectMapper.createObjectNode();
-                            cardInfo.put("mana", cardAtXY.getMana());
-                            cardInfo.put("attackDamage", cardAtXY.getAttackDamage());
-                            cardInfo.put("health", cardAtXY.getHealth());
-                            cardInfo.put("description", cardAtXY.getDescription());
-                            ArrayNode cardColours = objectMapper.createArrayNode();
-                            for (String color : cardAtXY.getColors()) {
-                                cardColours.add(color);
-                            }
-                            cardInfo.set("colors", cardColours);
-                            cardInfo.put("name", cardAtXY.getName());
-                            commandOutput.set("output", cardInfo);
+                            commandOutput.set("output", cardAtXY.cardInfo());
                             output.add(commandOutput);
                         } else {
                             commandOutput.put("output", "No card available at that position.");
@@ -432,11 +368,11 @@ public final class Main {
 
                         commandOutput.put("command", "cardUsesAbility");
 
-                        CardInput CardAttacker = gameTable.getTable().get(xAttacker).get(yAttacker);
-                        if (CardAttacker == null) {
+                        CardInput cardAttke = gameTable.getTable().get(xAttacker).get(yAttacker);
+                        if (cardAttke == null) {
                             break;
                         }
-                        if (CardAttacker.getFrozen()) {
+                        if (cardAttke.getFrozen()) {
                             ObjectNode cardAtk = objectMapper.createObjectNode();
                             cardAtk.put("x", xAttacker);
                             cardAtk.put("y", yAttacker);
@@ -449,7 +385,7 @@ public final class Main {
                             output.add(commandOutput);
                             break;
                         }
-                        if (CardAttacker.getUsedAbility() || CardAttacker.getUsed()) {
+                        if (cardAttke.getUsedAbility() || cardAttke.getUsed()) {
                             ObjectNode cardAtk = objectMapper.createObjectNode();
                             cardAtk.put("x", xAttacker);
                             cardAtk.put("y", yAttacker);
@@ -458,12 +394,13 @@ public final class Main {
                             cardDef.put("x", xAttacked);
                             cardDef.put("y", yAttacked);
                             commandOutput.set("cardAttacked", cardDef);
-                            commandOutput.put("error", "Attacker card has already attacked this turn.");
+                            commandOutput.put("error",
+                                    "Attacker card has already attacked this turn.");
                             output.add(commandOutput);
                             break;
                         }
 
-                        if (CardAttacker.getName().equals("Disciple")) {
+                        if (cardAttke.getName().equals("Disciple")) {
                             if (gameTable.isOpponentCard(player1.isMyTurn() ? 2 : 1,
                                     xAttacked, yAttacked)) {
                                 ObjectNode cardAtk = objectMapper.createObjectNode();
@@ -480,13 +417,13 @@ public final class Main {
                                 output.add(commandOutput);
                                 break;
                             } else {
-                                CardAttacker.setUsedAbility(true);
+                                cardAttke.setUsedAbility(true);
                                 gameTable.getTable().get(xAttacked).
                                         get(yAttacked).incrementHealth(2);
                             }
-                        } else if (CardAttacker.getName().equals("The Ripper")
-                                || CardAttacker.getName().equals("The Cursed One")
-                                || CardAttacker.getName().equals("Miraj")) {
+                        } else if (cardAttke.getName().equals("The Ripper")
+                                || cardAttke.getName().equals("The Cursed One")
+                                || cardAttke.getName().equals("Miraj")) {
                             if (!gameTable.isOpponentCard(player1.isMyTurn() ? 2 : 1,
                                     xAttacked, yAttacked)) {
                                 ObjectNode cardAtk = objectMapper.createObjectNode();
@@ -497,7 +434,8 @@ public final class Main {
                                 cardDef.put("x", xAttacked);
                                 cardDef.put("y", yAttacked);
                                 commandOutput.set("cardAttacked", cardDef);
-                                commandOutput.put("error", "Attacked card does not belong to the enemy.");
+                                commandOutput.put("error",
+                                        "Attacked card does not belong to the enemy.");
                                 output.add(commandOutput);
                             } else {
                                 if (gameTable.isTankOnTable(player1.isMyTurn() ? 2 : 1)) {
@@ -510,20 +448,22 @@ public final class Main {
                                         cardDef.put("x", xAttacked);
                                         cardDef.put("y", yAttacked);
                                         commandOutput.set("cardAttacked", cardDef);
-                                        commandOutput.put("error", "Attacked card is not of type 'Tank'.");
+                                        commandOutput.put("error",
+                                                "Attacked card is not of type 'Tank'.");
                                         output.add(commandOutput);
                                         break;
                                     }
                                 }
-                                CardAttacker.setUsedAbility(true);
-                                if (CardAttacker.getName().equals("Miraj")) {
+                                cardAttke.setUsedAbility(true);
+                                if (cardAttke.getName().equals("Miraj")) {
                                     int enemyHealth = gameTable.getTable().
                                             get(xAttacked).get(yAttacked).getHealth();
                                     gameTable.getTable().get(xAttacked).get(yAttacked).
-                                            setHealth(CardAttacker.getHealth());
-                                    CardAttacker.setHealth(enemyHealth);
-                                } else if (CardAttacker.getName().equals("The Ripper")) {
-                                    gameTable.getTable().get(xAttacked).get(yAttacked).decreaseAttackDamage(2);
+                                            setHealth(cardAttke.getHealth());
+                                    cardAttke.setHealth(enemyHealth);
+                                } else if (cardAttke.getName().equals("The Ripper")) {
+                                    gameTable.getTable().get(xAttacked)
+                                            .get(yAttacked).decreaseAttackDamage(2);
                                 }
                                 else {
                                     int enemyHealth = gameTable.getTable().get(xAttacked).
@@ -531,8 +471,10 @@ public final class Main {
                                     int enemyAttack = gameTable.getTable().get(xAttacked).
                                             get(yAttacked).getAttackDamage();
 
-                                    gameTable.getTable().get(xAttacked).get(yAttacked).setHealth(enemyAttack);
-                                    gameTable.getTable().get(xAttacked).get(yAttacked).setAttackDamage(enemyHealth);
+                                    gameTable.getTable().get(xAttacked)
+                                            .get(yAttacked).setHealth(enemyAttack);
+                                    gameTable.getTable().get(xAttacked)
+                                            .get(yAttacked).setAttackDamage(enemyHealth);
                                     if (gameTable.getTable().get(xAttacked).get(yAttacked).getHealth() == 0) {
                                         gameTable.removeCard(xAttacked, yAttacked);
                                     }
@@ -543,7 +485,7 @@ public final class Main {
                         break;
 
                     case "getFrozenCardsOnTable":
-                        commandOutput.put("command","getFrozenCardsOnTable");
+                        commandOutput.put("command", "getFrozenCardsOnTable");
                         commandOutput.set("output", gameTable.getFrozenCards());
                         output.add(commandOutput);
                         break;
@@ -591,16 +533,19 @@ public final class Main {
                         }
 
                         player = player1.isMyTurn() ? player2 : player1;
-                        player.getHero().reduceHealth(gameTable.getTable().get(xAttacker).get(yAttacker).getAttackDamage());
+                        player.getHero().reduceHealth(gameTable.getTable()
+                                .get(xAttacker).get(yAttacker).getAttackDamage());
                         gameTable.getTable().get(xAttacker).get(yAttacker).setUsed(true);
                         if (player.getHero().getHealth() <= 0) {
                             if (player1.isMyTurn()) {
-                                commandOutput.put("gameEnded", "Player one killed the enemy hero.");
+                                commandOutput.put("gameEnded",
+                                        "Player one killed the enemy hero.");
                                 player1.iJustWon();
                                 oneWins++;
                                 endGame = true;
                             } else {
-                                commandOutput.put("gameEnded", "Player two killed the enemy hero.");
+                                commandOutput.put("gameEnded",
+                                        "Player two killed the enemy hero.");
                                 player2.iJustWon();
                                 twoWins++;
                                 endGame = true;
@@ -634,7 +579,8 @@ public final class Main {
                             if (gameTable.checkRow(player1.isMyTurn() ? 1 : 2, row)) {
                                 commandOutput.put("command", command);
                                 commandOutput.put("affectedRow", row);
-                                commandOutput.put("error", "Selected row does not belong to the enemy.");
+                                commandOutput.put("error",
+                                        "Selected row does not belong to the enemy.");
                                 output.add(commandOutput);
                                 break;
                             }
@@ -651,7 +597,8 @@ public final class Main {
                             if (!gameTable.checkRow(player1.isMyTurn() ? 1 : 2, row)) {
                                 commandOutput.put("command", command);
                                 commandOutput.put("affectedRow", row);
-                                commandOutput.put("error", "Selected row does not belong to the current player.");
+                                commandOutput.put("error",
+                                        "Selected row does not belong to the current player.");
                                 output.add(commandOutput);
                                 break;
                             }
