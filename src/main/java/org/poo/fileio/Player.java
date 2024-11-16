@@ -23,44 +23,122 @@ public class Player {
 		wins = 0;
 	}
 
+	/**
+	 * sets the player's game deck
+	 * @param deck
+	 * the deck of cards
+	 */
 	public void setDeck(ArrayList<CardInput> deck) {
 		this.deck = deck;
 	}
+
+	/**
+	 * sets the first card that can be used by a player
+	 * @param inHand
+	 * the cards
+	 */
 	public void setInHand(ArrayList<CardInput> inHand) {
 		this.inHand = inHand;
 	}
+
+	/**
+	 * sets the player's hero
+	 * @param hero
+	 *  the hero card
+	 */
 	public void setHero(CardInput hero) {
 		this.hero = hero;
 	}
+
+	/**
+	 * sets player's mana
+	 * @param mana
+	 *  mana
+	 */
 	public void setMana(int mana) {
 		this.mana = mana;
 	}
+
+	/**
+	 * sets a player's turn
+	 * @param myTurn
+	 * true is it's the players turn, false otherwise
+	 */
 	public void setMyTurn(boolean myTurn) {
 		this.myTurn = myTurn;
 	}
+
+	/**
+	 *
+	 * @return
+	 * returns the cards that the player has
+	 */
 	public ArrayList<CardInput> getDeck() {
 		return deck;
 	}
+
+	/**
+	 *
+	 * @return
+	 * return the cards that are still placed in the player's hand
+	 */
 	public ArrayList<CardInput> getInHand() {
 		return inHand;
 	}
+
+	/**
+	 *
+	 * @return
+	 * returns the hero card of the player
+	 */
 	public CardInput getHero() {
 		return hero;
 	}
+
+	/**
+	 *
+	 * @return
+	 * return the mana of the player
+	 */
 	public int getMana() {
 		return mana;
 	}
+
+	/**
+	 *
+	 * @return
+	 * returns true if it's the player's turn, false otherwise
+	 */
 	public boolean isMyTurn() {
 		return myTurn;
 	}
+
+	/**
+	 *
+	 * @return
+	 * returns the number of games won by a player
+	 */
 	public int getWins() {
 		return wins;
 	}
+
+	/**
+	 * sets the wins
+	 * @param wins
+	 * number of wins
+	 */
 	public void setWins(int wins) {
 		this.wins = wins;
 	}
 
+	/**
+	 * increments the number of games won
+	 */
 	public void iJustWon() { wins++; }
+
+	/**
+	 * done at the end of a player's turn to unmark all the cards that were used
+	 */
 	public void setDeckUnused() {
 		for (CardInput card : deck) {
 			card.setFrozen(false);
@@ -69,9 +147,20 @@ public class Player {
 		}
 	}
 
+	/**
+	 * add a card to deck of cards held in hand
+	 * @param inHand
+	 * the card to be added
+	 */
 	public void add_inHand(CardInput inHand) {
 		this.inHand.add(inHand);
 	}
+
+	/**
+	 * prints a player's deck
+	 * @return
+	 * return the ArrayNode used for the output in JSON
+	 */
 	public ArrayNode printDeck() {
 		ArrayNode deckOutput = objectMapper.createArrayNode();
 		for (CardInput card : deck) {
@@ -91,6 +180,11 @@ public class Player {
 		return deckOutput;
 	}
 
+	/**
+	 * prints the player's hero card
+	 * @return
+	 * the ObjectNode used for the output in JSON
+	 */
 	public ObjectNode printHero() {
 		ObjectNode heroOutput = objectMapper.createObjectNode();
 		heroOutput.put("mana", hero.getMana());
@@ -105,6 +199,11 @@ public class Player {
 		return heroOutput;
 	}
 
+	/**
+	 * prints the cards held in hand
+	 * @return
+	 * return the ArrayNode used for the output in JSON
+	 */
 	public ArrayNode printInHand() {
 		ArrayNode deckOutput = objectMapper.createArrayNode();
 		for (CardInput card : inHand) {
@@ -124,8 +223,12 @@ public class Player {
 		return deckOutput;
 	}
 
+	/**
+	 * increments a player's mana
+	 * @param mana
+	 * is added to the current mana
+	 */
 	public void addMana(int mana) {
 		this.mana += mana;
 	}
-
 }
