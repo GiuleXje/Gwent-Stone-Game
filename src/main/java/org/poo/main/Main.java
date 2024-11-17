@@ -8,13 +8,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.poo.checker.CheckerConstants;
 import org.poo.fileio.ActionsInput;
-import org.poo.fileio.GameTable;
-import org.poo.fileio.Player;
-import org.poo.fileio.CardInput;
-import org.poo.fileio.Coordinates;
 import org.poo.fileio.GameInput;
+import org.poo.fileio.GameTable;
 import org.poo.fileio.Input;
+import org.poo.fileio.Player;
 import org.poo.fileio.StartGameInput;
+import org.poo.fileio.TakeAction;
 
 
 import java.io.File;
@@ -82,31 +81,25 @@ public final class Main {
                 Input.class);
 
         ArrayNode output = objectMapper.createArrayNode();
-
         ArrayList<GameInput> games = inputData.getGames();
         int oneWins = 0;
         int twoWins = 0;
         int gamesPlayed = 0;
-        final int maxMana = 10;
         for (GameInput game : games) { //loop through all existent games
             gamesPlayed++;
             StartGameInput startGame = game.getStartGame();
             int pl1Idx = startGame.getPlayerOneDeckIdx();
             int pl2Idx = startGame.getPlayerTwoDeckIdx();
-            int turns = 0;
             Player player1 = new Player();
             Player player2 = new Player();
-
             //deep copy of the decks
             player1.deepCopyDeck(inputData.getPlayerOneDecks().getDecks().get(pl1Idx));
             player2.deepCopyDeck(inputData.getPlayerTwoDecks().getDecks().get(pl2Idx));
-
             // set a new game table
             GameTable gameTable = new GameTable();
             //shuffle each player's deck
             Collections.shuffle(player1.getDeck(), new Random(startGame.getShuffleSeed()));
             Collections.shuffle(player2.getDeck(), new Random(startGame.getShuffleSeed()));
-
             // set each player's in hand card
             if (!player1.getDeck().isEmpty()) {
                 player1.initInHand(player1.getDeck().getFirst());
@@ -127,21 +120,14 @@ public final class Main {
             }
             //get game commands
             ArrayList<ActionsInput> actions = game.getActions();
-            boolean endGame = false;
-            for (ActionsInput action : actions) {
+            TakeAction takeAction = new TakeAction();
+            for (ActionsInput action : actions) { //loop through every command of the game
                 String command = action.getCommand();
+                takeAction.copyFrom(action);
                 int playerIdx;
                 Player player;
                 // for the output needed at each command
                 ObjectNode commandOutput = objectMapper.createObjectNode();
-
-                Coordinates attackerCard;
-                Coordinates attackedCard;
-                int xAttacker;
-                int yAttacker;
-                int xAttacked;
-                int yAttacked;
-
                 switch (command) {
                     case "getPlayerDeck":
                         playerIdx = action.getPlayerIdx();
@@ -152,7 +138,6 @@ public final class Main {
                         commandOutput.set("output", deckOutput);
                         output.add(commandOutput);
                         break;
-
                     case "getPlayerHero":
                         playerIdx = action.getPlayerIdx();
                         commandOutput.put("command", command);
@@ -162,45 +147,14 @@ public final class Main {
                         commandOutput.set("output", heroOutput);
                         output.add(commandOutput);
                         break;
-
                     case "getPlayerTurn":
                         commandOutput.put("command", "getPlayerTurn");
                         commandOutput.put("output", player1.isMyTurn() ? 1 : 2);
                         output.add(commandOutput);
                         break;
-
                     case "endPlayerTurn":
-                        int ply = player1.isMyTurn() ? 1 : 2;
-                        if (ply == 1) {
-                            gameTable.unfreezePlayerOne();
-                        } else {
-                            gameTable.unfreezePlayerTwo();
-                        }
-                        if (player1.isMyTurn()) {
-                            player1.setMyTurn(false);
-                            player2.setMyTurn(true);
-                        } else {
-                            player2.setMyTurn(false);
-                            player1.setMyTurn(true);
-                        }
-                        turns += 1;
-                        if (turns % 2 == 0) { // add the mana after each turn
-                            player1.addMana(Math.min(maxMana, turns / 2 + 1));
-                            player2.addMana(Math.min(maxMana, turns / 2 + 1));
-                            // add in hand card at each turn
-                            if (!player1.getDeck().isEmpty()) {
-                                player1.addInHand(player1.getDeck().getFirst());
-                                player1.getDeck().removeFirst();
-                            }
-                            if (!player2.getDeck().isEmpty()) {
-                                player2.addInHand(player2.getDeck().getFirst());
-                                player2.getDeck().removeFirst();
-                            }
-                            player1.getHero().setUsed(false);
-                            player2.getHero().setUsed(false);
-                        }
+                        takeAction.endPlayerTurn(player1, player2, gameTable);
                         break;
-
                     case "getCardsInHand":
                         playerIdx = action.getPlayerIdx();
                         player = (playerIdx == 1) ? player1 : player2;
@@ -209,279 +163,26 @@ public final class Main {
                         commandOutput.set("output", player.printInHand());
                         output.add(commandOutput);
                         break;
-
                     case "placeCard":// add the card on the game table
-                        int cardIdx = action.getHandIdx();
-                        player = player1.isMyTurn() ? player1 : player2;
-                        if (player.getInHand().isEmpty()) {
-                            break;
-                        }
-                        if (player.getMana() - player.getInHand().get(cardIdx).getMana() < 0) {
-                            commandOutput.put("command", "placeCard");
-                            commandOutput.put("handIdx", cardIdx);
-                            commandOutput.put("error", "Not enough mana to place card on table.");
-                            output.add(commandOutput);
-                            break;
-                        }
-                        CardInput newCardOnTable = player.getInHand().get(cardIdx);
-                        newCardOnTable.setUsed(false);
-                        newCardOnTable.setFrozen(false);
-                        newCardOnTable.setUsedAbility(false);
-                        int res = gameTable.placeCard(player1.isMyTurn() ? 1 : 2, newCardOnTable);
-                        if (res == 0) {
-                            player.setMana(player.getMana() - newCardOnTable.getMana());
-                            player.getInHand().remove(cardIdx);
-                            break;
-                        } else if (res == 1) {
-                            commandOutput.put("command", "placeCard");
-                            commandOutput.put("handIdx", cardIdx);
-                            commandOutput.put("error",
-                                    "Cannot place card on table since row is full.");
-                            output.add(commandOutput);
-                            break;
-                        }
+                        takeAction.placeCard(player1, player2, output, gameTable);
                         break;
-
                     case "getPlayerMana":
-                        playerIdx = action.getPlayerIdx();
-                        player = (playerIdx == 1) ? player1 : player2;
-                        commandOutput.put("command", "getPlayerMana");
-                        commandOutput.put("playerIdx", playerIdx);
-                        commandOutput.put("output", player.getMana());
-                        output.add(commandOutput);
+                        takeAction.getPlayerMana(player1, player2, output);
                         break;
-
                     case "getCardsOnTable":
                         commandOutput.put("command", "getCardsOnTable");
                         commandOutput.set("output", gameTable.printTable());
                         output.add(commandOutput);
                         break;
-
                     case "cardUsesAttack":
-                        attackerCard = action.getCardAttacker();
-                        attackedCard = action.getCardAttacked();
-                        xAttacker = attackerCard.getX();
-                        yAttacker = attackerCard.getY();
-                        xAttacked = attackedCard.getX();
-                        yAttacked = attackedCard.getY();
-
-                        player = player1.isMyTurn() ? player1 : player2;
-                        boolean ok = gameTable.isOpponentCard(player1.isMyTurn() ? 2 : 1,
-                                xAttacked, yAttacked);
-                        if (!ok) {
-                            commandOutput.put("command", "cardUsesAttack");
-                            ObjectNode cordAtk = objectMapper.createObjectNode();
-                            cordAtk.put("x", xAttacker);
-                            cordAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cordAtk);
-                            ObjectNode cordDef = objectMapper.createObjectNode();
-                            cordDef.put("x", xAttacked);
-                            cordDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cordDef);
-                            commandOutput.put("error",
-                                    "Attacked card does not belong to the enemy.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (gameTable.isCardUsed(xAttacker, yAttacker)) {
-                            commandOutput.put("command", "cardUsesAttack");
-                            ObjectNode cordAtk = objectMapper.createObjectNode();
-                            cordAtk.put("x", xAttacker);
-                            cordAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cordAtk);
-                            ObjectNode cordDef = objectMapper.createObjectNode();
-                            cordDef.put("x", xAttacked);
-                            cordDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cordDef);
-                            commandOutput.put("error",
-                                    "Attacker card has already attacked this turn.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (gameTable.isCardFrozen(xAttacker, yAttacker)) {
-                            commandOutput.put("command", "cardUsesAttack");
-                            ObjectNode cordAtk = objectMapper.createObjectNode();
-                            cordAtk.put("x", xAttacker);
-                            cordAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cordAtk);
-                            ObjectNode cordDef = objectMapper.createObjectNode();
-                            cordDef.put("x", xAttacked);
-                            cordDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cordDef);
-                            commandOutput.put("error", "Attacker card is frozen.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        CardInput cardAttacked = gameTable.getTable().get(xAttacked).get(yAttacked);
-                        if (!cardAttacked.getName().equals("Goliath")
-                                && !cardAttacked.getName().equals("Warden")
-                                && gameTable.isTankOnTable(player1.isMyTurn() ? 2 : 1)) {
-                            commandOutput.put("command", command);
-                            ObjectNode cordAtk = objectMapper.createObjectNode();
-                            cordAtk.put("x", xAttacker);
-                            cordAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cordAtk);
-                            ObjectNode cordDef = objectMapper.createObjectNode();
-                            cordDef.put("x", xAttacked);
-                            cordDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cordDef);
-                            commandOutput.put("error", "Attacked card is not of type 'Tank'.");
-                            output.add(commandOutput);
-                            break;
-                        }
-                        CardInput cardAttk = gameTable.getTable().get(xAttacker).get(yAttacker);
-                        if (cardAttk != null) {
-                            cardAttacked.reduceHealth(cardAttk.getAttackDamage());
-                            cardAttk.setUsed(true);
-                            if (cardAttacked.getHealth() <= 0) {
-                                gameTable.removeCard(xAttacked, yAttacked);
-                            }
-                        }
+                        takeAction.cardUsesAttack(output, gameTable, player1, player2);
                         break;
-
                     case "getCardAtPosition"://check if the card at a certain position is valid
-                        int xCard = action.getX();
-                        int yCard = action.getY();
-                        commandOutput.put("command", "getCardAtPosition");
-                        commandOutput.put("x", xCard);
-                        commandOutput.put("y", yCard);
-                        if (gameTable.isCardAtXY(xCard, yCard)) {
-                            CardInput cardAtXY = gameTable.getTable().get(xCard).get(yCard);
-                            commandOutput.set("output", cardAtXY.cardInfo());
-                            output.add(commandOutput);
-                        } else {
-                            commandOutput.put("output", "No card available at that position.");
-                            output.add(commandOutput);
-                        }
+                        takeAction.getCardAtPosition(output, gameTable);
                         break;
 
                     case "cardUsesAbility":
-                        attackerCard = action.getCardAttacker();
-                        attackedCard = action.getCardAttacked();
-                        xAttacker = attackerCard.getX();
-                        yAttacker = attackerCard.getY();
-                        xAttacked = attackedCard.getX();
-                        yAttacked = attackedCard.getY();
-
-                        commandOutput.put("command", "cardUsesAbility");
-
-                        CardInput cardAttke = gameTable.getTable().get(xAttacker).get(yAttacker);
-                        if (cardAttke == null) {
-                            break;
-                        }
-                        if (cardAttke.getFrozen()) {
-                            ObjectNode cardAtk = objectMapper.createObjectNode();
-                            cardAtk.put("x", xAttacker);
-                            cardAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cardAtk);
-                            ObjectNode cardDef = objectMapper.createObjectNode();
-                            cardDef.put("x", xAttacked);
-                            cardDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cardDef);
-                            commandOutput.put("error", "Attacker card if frozen.");
-                            output.add(commandOutput);
-                            break;
-                        }
-                        if (cardAttke.getUsedAbility() || cardAttke.getUsed()) {
-                            ObjectNode cardAtk = objectMapper.createObjectNode();
-                            cardAtk.put("x", xAttacker);
-                            cardAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cardAtk);
-                            ObjectNode cardDef = objectMapper.createObjectNode();
-                            cardDef.put("x", xAttacked);
-                            cardDef.put("y", yAttacked);
-                            commandOutput.set("cardAttacked", cardDef);
-                            commandOutput.put("error",
-                                    "Attacker card has already attacked this turn.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (cardAttke.getName().equals("Disciple")) {
-                            if (gameTable.isOpponentCard(player1.isMyTurn() ? 2 : 1,
-                                    xAttacked, yAttacked)) {
-                                ObjectNode cardAtk = objectMapper.createObjectNode();
-                                cardAtk.put("x", xAttacker);
-                                cardAtk.put("y", yAttacker);
-                                commandOutput.set("cardAttacker", cardAtk);
-                                ObjectNode cardDef = objectMapper.createObjectNode();
-                                cardDef.put("x", xAttacked);
-                                cardDef.put("y", yAttacked);
-                                commandOutput.set("cardAttacked", cardDef);
-                                commandOutput.put("error",
-                                        "Attacked card does not belong to"
-                                                + " the current player.");
-                                output.add(commandOutput);
-                                break;
-                            } else {
-                                cardAttke.setUsedAbility(true);
-                                gameTable.getTable().get(xAttacked).
-                                        get(yAttacked).incrementHealth(2);
-                            }
-                        } else if (cardAttke.getName().equals("The Ripper")
-                                || cardAttke.getName().equals("The Cursed One")
-                                || cardAttke.getName().equals("Miraj")) {
-                            if (!gameTable.isOpponentCard(player1.isMyTurn() ? 2 : 1,
-                                    xAttacked, yAttacked)) {
-                                ObjectNode cardAtk = objectMapper.createObjectNode();
-                                cardAtk.put("x", xAttacker);
-                                cardAtk.put("y", yAttacker);
-                                commandOutput.set("cardAttacker", cardAtk);
-                                ObjectNode cardDef = objectMapper.createObjectNode();
-                                cardDef.put("x", xAttacked);
-                                cardDef.put("y", yAttacked);
-                                commandOutput.set("cardAttacked", cardDef);
-                                commandOutput.put("error",
-                                        "Attacked card does not belong to the enemy.");
-                                output.add(commandOutput);
-                            } else {
-                                if (gameTable.isTankOnTable(player1.isMyTurn() ? 2 : 1)) {
-                                    if (!gameTable.getTable().get(xAttacked).get(yAttacked).isCardTank()) {
-                                        ObjectNode cardAtk = objectMapper.createObjectNode();
-                                        cardAtk.put("x", xAttacker);
-                                        cardAtk.put("y", yAttacker);
-                                        commandOutput.set("cardAttacker", cardAtk);
-                                        ObjectNode cardDef = objectMapper.createObjectNode();
-                                        cardDef.put("x", xAttacked);
-                                        cardDef.put("y", yAttacked);
-                                        commandOutput.set("cardAttacked", cardDef);
-                                        commandOutput.put("error",
-                                                "Attacked card is not of type 'Tank'.");
-                                        output.add(commandOutput);
-                                        break;
-                                    }
-                                }
-                                cardAttke.setUsedAbility(true);
-                                if (cardAttke.getName().equals("Miraj")) {
-                                    int enemyHealth = gameTable.getTable().
-                                            get(xAttacked).get(yAttacked).getHealth();
-                                    gameTable.getTable().get(xAttacked).get(yAttacked).
-                                            setHealth(cardAttke.getHealth());
-                                    cardAttke.setHealth(enemyHealth);
-                                } else if (cardAttke.getName().equals("The Ripper")) {
-                                    gameTable.getTable().get(xAttacked)
-                                            .get(yAttacked).decreaseAttackDamage(2);
-                                }
-                                else {
-                                    int enemyHealth = gameTable.getTable().get(xAttacked).
-                                            get(yAttacked).getHealth();
-                                    int enemyAttack = gameTable.getTable().get(xAttacked).
-                                            get(yAttacked).getAttackDamage();
-
-                                    gameTable.getTable().get(xAttacked)
-                                            .get(yAttacked).setHealth(enemyAttack);
-                                    gameTable.getTable().get(xAttacked)
-                                            .get(yAttacked).setAttackDamage(enemyHealth);
-                                    if (gameTable.getTable().get(xAttacked).get(yAttacked).getHealth() == 0) {
-                                        gameTable.removeCard(xAttacked, yAttacked);
-                                    }
-
-                                }
-                            }
-                        }
+                        takeAction.cardUsesAbility(output, player1, player2, gameTable);
                         break;
 
                     case "getFrozenCardsOnTable":
@@ -489,129 +190,17 @@ public final class Main {
                         commandOutput.set("output", gameTable.getFrozenCards());
                         output.add(commandOutput);
                         break;
-
                     case "useAttackHero":
-                        attackedCard = action.getCardAttacker();
-                        xAttacker = attackedCard.getX();
-                        yAttacker = attackedCard.getY();
-
-                        if (gameTable.getTable().get(xAttacker).get(yAttacker) == null) {
-                            break;
-                        }
-                        if (gameTable.getTable().get(xAttacker).get(yAttacker).getFrozen()) {
-                            commandOutput.put("command", command);
-                            ObjectNode cardAtk = objectMapper.createObjectNode();
-                            cardAtk.put("x", xAttacker);
-                            cardAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cardAtk);
-                            commandOutput.put("error", "Attacker card is frozen.");
-                            output.add(commandOutput);
-                            break;
-                        }
-                        if (gameTable.getTable().get(xAttacker).get(yAttacker).getUsedAbility()
-                                || gameTable.getTable().get(xAttacker).get(yAttacker).getUsed()) {
-                            commandOutput.put("command", command);
-                            ObjectNode cardAtk = objectMapper.createObjectNode();
-                            cardAtk.put("x", xAttacker);
-                            cardAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cardAtk);
-                            commandOutput.put("error",
-                                    "Attacker card has already attacked this turn.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (gameTable.isTankOnTable(player1.isMyTurn() ? 2 : 1)) {
-                            commandOutput.put("command", command);
-                            ObjectNode cardAtk = objectMapper.createObjectNode();
-                            cardAtk.put("x", xAttacker);
-                            cardAtk.put("y", yAttacker);
-                            commandOutput.set("cardAttacker", cardAtk);
-                            commandOutput.put("error", "Attacked card is not of type 'Tank'.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        player = player1.isMyTurn() ? player2 : player1;
-                        player.getHero().reduceHealth(gameTable.getTable()
-                                .get(xAttacker).get(yAttacker).getAttackDamage());
-                        gameTable.getTable().get(xAttacker).get(yAttacker).setUsed(true);
-                        if (player.getHero().getHealth() <= 0) {
-                            if (player1.isMyTurn()) {
-                                commandOutput.put("gameEnded",
-                                        "Player one killed the enemy hero.");
-                                player1.iJustWon();
-                                oneWins++;
-                                endGame = true;
-                            } else {
-                                commandOutput.put("gameEnded",
-                                        "Player two killed the enemy hero.");
-                                player2.iJustWon();
-                                twoWins++;
-                                endGame = true;
-                            }
-                            output.add(commandOutput);
-                            break;
+                        int x = takeAction.useAttackHero(output, player1, player2, gameTable);
+                        if (x == 1) {
+                            oneWins++;
+                        } else if (x == 2) {
+                            twoWins++;
                         }
                         break;
-
                     case "useHeroAbility":
-                        int row = action.getAffectedRow();
-                        player = player1.isMyTurn() ? player1 : player2;
-                        if (player.getMana() < player.getHero().getMana()) {
-                            commandOutput.put("command", command);
-                            commandOutput.put("affectedRow", row);
-                            commandOutput.put("error", "Not enough mana to use hero's ability.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (player.getHero().getUsed()) {
-                            commandOutput.put("command", command);
-                            commandOutput.put("affectedRow", row);
-                            commandOutput.put("error", "Hero has already attacked this turn.");
-                            output.add(commandOutput);
-                            break;
-                        }
-
-                        if (player.getHero().getName().equals("Lord Royce")
-                                || player.getHero().getName().equals("Empress Thorina")) {
-                            if (gameTable.checkRow(player1.isMyTurn() ? 1 : 2, row)) {
-                                commandOutput.put("command", command);
-                                commandOutput.put("affectedRow", row);
-                                commandOutput.put("error",
-                                        "Selected row does not belong to the enemy.");
-                                output.add(commandOutput);
-                                break;
-                            }
-                            // decrease the cost of using the hero
-                            player.addMana(-player.getHero().getMana());
-                            player.getHero().setUsed(true);
-                            if (player.getHero().getName().equals("Lord Royce")) {
-                                gameTable.performLordRoyce(row);
-                                break;
-                            } else {
-                                gameTable.performEmpressThorina(row);
-                            }
-                        } else {
-                            if (!gameTable.checkRow(player1.isMyTurn() ? 1 : 2, row)) {
-                                commandOutput.put("command", command);
-                                commandOutput.put("affectedRow", row);
-                                commandOutput.put("error",
-                                        "Selected row does not belong to the current player.");
-                                output.add(commandOutput);
-                                break;
-                            }
-                            player.addMana(-player.getHero().getMana());
-                            player.getHero().setUsed(true);
-                            if (player.getHero().getName().equals("King Mudface")) {
-                                gameTable.performKingMudface(row);
-                            } else {
-                                gameTable.performGeneralKocioraw(row);
-                            }
-                        }
+                        takeAction.useHeroAbility(output, player1, player2, gameTable);
                         break;
-
                     case "getTotalGamesPlayed":
                         commandOutput.put("command", command);
                         commandOutput.put("output", gamesPlayed);
@@ -631,10 +220,7 @@ public final class Main {
                         break;
                 }
             }
-
-
         }
-
         ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
         objectWriter.writeValue(new File(filePath2), output);
     }

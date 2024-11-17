@@ -6,9 +6,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 
-public class GameTable {
+public final class GameTable {
 	private ArrayList<ArrayList<CardInput>> table;
-	private ObjectMapper objectMapper = new ObjectMapper();
+	private final ObjectMapper objectMapper = new ObjectMapper();
 	public static final int LINELIMIT = 4;
 	public static final int COLLIMIT = 5;
 
@@ -63,7 +63,7 @@ public class GameTable {
 			}
 		} else {
 			if (card.getName().equals("Sentinel") || card.getName().equals("Berserker")
-					||card.getName().equals("The Cursed One")
+					|| card.getName().equals("The Cursed One")
 					|| card.getName().equals("Disciple")) {
 				for (int i = 0; i < COLLIMIT; i++) {
 					if (table.getFirst().get(i) == null) {

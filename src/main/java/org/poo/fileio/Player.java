@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import java.util.ArrayList;
 
-public class Player {
+public final class Player {
 	private static final ObjectMapper OBJECTMAPPER = new ObjectMapper();
 	private ArrayList<CardInput> deck;
 	private int mana;
@@ -159,7 +159,9 @@ public class Player {
 	/**
 	 * increments the number of games won
 	 */
-	public void iJustWon() { wins++; }
+	public void iJustWon() {
+		wins++;
+	}
 
 	/**
 	 * done at the end of a player's turn to unmark all the cards that were used
