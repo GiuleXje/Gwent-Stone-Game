@@ -1,8 +1,12 @@
 package org.poo.fileio;
 
 import java.util.ArrayList;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public final class CardInput {
+    private ObjectMapper objectMapper = new ObjectMapper();
     private int mana;
     private int attackDamage;
     private int health;
@@ -12,9 +16,30 @@ public final class CardInput {
     private boolean used;
     private boolean frozen;
     private boolean usedAbility;
-    //added 2 more fields to handle used and frozen cards
+    //added 3 more fields to handle used, used ability(for heroes) and frozen cards
 
     public CardInput() {
+    }
+
+    /**
+     * clones a card's attributes
+     * @return
+     * return a new instance of the card
+     */
+    @Override
+    public CardInput clone() {
+        CardInput clone = new CardInput();
+        clone.mana = mana;
+        clone.health = health;
+        clone.attackDamage = attackDamage;
+        clone.description = description;
+        clone.colors = colors;
+        clone.name = name;
+        clone.used = used;
+        clone.frozen = frozen;
+        clone.usedAbility = usedAbility;
+        return clone;
+
     }
 
     public int getMana() {
@@ -69,7 +94,7 @@ public final class CardInput {
         return used;
     }
 
-    public void setUsed(boolean used) {
+    public void setUsed(final boolean used) {
         this.used = used;
     }
 
@@ -77,11 +102,11 @@ public final class CardInput {
         return frozen;
     }
 
-    public void setFrozen(boolean frozen) {
+    public void setFrozen(final boolean frozen) {
         this.frozen = frozen;
     }
 
-    public void setUsedAbility(boolean usedAbility) {
+    public void setUsedAbility(final boolean usedAbility) {
         this.usedAbility = usedAbility;
     }
 
@@ -89,24 +114,71 @@ public final class CardInput {
         return usedAbility;
     }
 
-    public void reduceHealth(int damage) {
+    /**
+     *
+     * @param damage
+     * reduces the card's health by damage points
+     */
+    public void reduceHealth(final int damage) {
         health -= damage;
     }
 
-    public void incrementHealth(int add) {
+    /**
+     *
+     * @param add
+     * increases the card's health by add points
+     */
+    public void incrementHealth(final int add) {
         health += add;
     }
 
+    /**
+     *
+     * @return
+     * return true if the card if of type Tank, false otherwise
+     */
     public boolean isCardTank() {
         return name.equals("Goliath") || name.equals("Warden");
     }
 
-    public void decreaseAttackDamage(int decrease) {
+    /**
+     *
+     * @param decrease
+     * decreases the attack damage by decrease points
+     */
+    public void decreaseAttackDamage(final int decrease) {
         attackDamage = Math.max(0, attackDamage - decrease);
     }
 
-    public void increaseAttackDamage(int increase) {
+    /**
+     *
+     * @param increase
+     * increases attack damage by increase points
+     */
+    public void increaseAttackDamage(final int increase) {
         attackDamage += increase;
+    }
+
+    /**
+     * gets the card's info
+     * @return
+     * returns the object node needed for the JSON output
+     */
+    public ObjectNode cardInfo() {
+        ObjectNode cardOutput = objectMapper.createObjectNode();
+        cardOutput.put("mana", mana);
+        cardOutput.put("attackDamage", attackDamage);
+        cardOutput.put("health", health);
+        cardOutput.put("description", description);
+
+        // Add colors array
+        ArrayNode colorsNode = objectMapper.createArrayNode();
+        for (String color : colors) {
+            colorsNode.add(color);
+        }
+        cardOutput.set("colors", colorsNode);
+        cardOutput.put("name", name);
+        return cardOutput;
     }
 
     @Override
@@ -124,7 +196,6 @@ public final class CardInput {
                 + ", colors="
                 + colors
                 + ", name='"
-                +  ""
                 + name
                 + '\''
                 + '}';
